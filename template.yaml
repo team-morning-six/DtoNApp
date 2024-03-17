@@ -38,6 +38,10 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: rate(1 minute)
+      Environment:
+        Variables:
+          DISCORD_API_TOKEN: DISCORD_API_TOKEN
+          NOTION_API_KEY: NOTION_API_KEY
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
