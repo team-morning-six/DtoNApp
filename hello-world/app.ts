@@ -89,7 +89,6 @@ const createNotionPage = async (postTitle: string, postUserId: string, postDescr
     };
 
     const response = await axios.post(NOTION_BASE_URL + '/pages', data, { headers });
-    console.log(response.data);
 };
 
 // todo: あとで直す
@@ -105,13 +104,10 @@ type USER_TAG_KEY_TYPE = keyof typeof USER_TAG;
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult | undefined> => {
     try {
         const discord_channel_ids = Object.values(DISCORD_CHANNEL_ID);
-        const discord_messages = await Promise.all(discord_channel_ids.map((channelId) => fetchDiscordMessages(channelId)));
+        const discord_messages = await Promise.all(discord_channel_ids.map(async (channelId) => await fetchDiscordMessages(channelId))).then(results => results.flat());
 
-        console.log("discord_channel_ids", discord_channel_ids);
-        console.log("discord_messages", discord_messages);
         const postNotion = async (discord_messages: any) => {
             for (const message of discord_messages) {
-                console.log("message.author", message.author);
                 const userName = message.author.username as USER_TAG_KEY_TYPE;
 
                 const isTitleIncluded = message.content.includes('-t');
@@ -120,7 +116,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 let postDescription = '';
 
                 if (!isTitleIncluded && !isDescriptionIncluded) {
-                    return;
+                    continue
                 }
 
                 if (isTitleIncluded && !isDescriptionIncluded) {
@@ -142,8 +138,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
                 const postUserId = USER_TAG[userName];
 
-                // postTitle, postDescriptionが両方ともfalsyの場合はcreateNotionPageを実行せずにreturnする
-                createNotionPage(postTitle, postUserId, postDescription);
+                await createNotionPage(postTitle, postUserId, postDescription);
             }
         }
 
