@@ -15,6 +15,13 @@ import { decycle } from 'json-cyclic';
 const DISCORD_API_BASEURL = 'https://discordapp.com/api/';
 const DISCORD_API_TOKEN = process.env.DISCORD_API_TOKEN;
 
+const DISCORD_CHANNEL_ID = {
+    times_ryuji_takagi: '1140113011386880070',
+    times_yunosuke_minegishi: '1149696633546756188',
+    times_yuki_haga: '1149701115307376702',
+    times_yano: '1149914100084785265',
+};
+
 const fetchDiscord = async () => {
     return await axios
         .get(DISCORD_API_BASEURL + 'channels/1149914100084785265/messages', {
@@ -95,15 +102,38 @@ const USER_TAG = {
 
 type USER_TAG_KEY_TYPE = keyof typeof USER_TAG;
 
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult | undefined> => {
     try {
         const message = await fetchDiscord();
         const userName = message.author.username as USER_TAG_KEY_TYPE;
 
-        // todo: あとで直す
-        const postTitle = '仮のタイトルです';
+        const isTitleIncluded = message.content.includes('-t');
+        const isDescriptionIncluded = message.content.includes('-d');
+        let postTitle;
+        let postDescription = '';
+
+        if (!isTitleIncluded && !isDescriptionIncluded) {
+            return;
+        }
+
+        if (isTitleIncluded && !isDescriptionIncluded) {
+            postTitle = message.content.split('-t')[1].trim();
+        }
+
+        if (isDescriptionIncluded && !isTitleIncluded) {
+            postDescription = message.content.split('-d')[1];
+        }
+
+        if (!postTitle) {
+            postTitle = new Date().toString();
+        }
+
+        if (isTitleIncluded && isDescriptionIncluded) {
+            postTitle = message.content.split('-t')[1].split('-d')[0].trim();
+            postDescription = message.content.split('-d')[1];
+        }
+
         const postUserId = USER_TAG[userName];
-        const postDescription = message.content;
 
         createNotionPage(postTitle, postUserId, postDescription);
 
