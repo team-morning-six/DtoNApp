@@ -22,12 +22,12 @@ const DISCORD_CHANNEL_ID = {
     times_yano: '1149914100084785265',
 };
 
-const fetchDiscord = async () => {
+const fetchDiscordMessages = async (channelId: string) => {
     return await axios
-        .get(DISCORD_API_BASEURL + 'channels/1149914100084785265/messages', {
+        .get(`${DISCORD_API_BASEURL}channels/${channelId}/messages`, {
             headers: { Authorization: 'Bot ' + DISCORD_API_TOKEN },
         })
-        .then((response) => response.data[0])
+        .then((response) => response.data)
         .catch((error) => {
             console.log(error);
         });
@@ -104,47 +104,54 @@ type USER_TAG_KEY_TYPE = keyof typeof USER_TAG;
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult | undefined> => {
     try {
-        const message = await fetchDiscord();
-        const userName = message.author.username as USER_TAG_KEY_TYPE;
+        const discord_channel_ids = Object.values(DISCORD_CHANNEL_ID);
+        const discord_messages = await Promise.all(discord_channel_ids.map((channelId) => fetchDiscordMessages(channelId)));
 
-        const isTitleIncluded = message.content.includes('-t');
-        const isDescriptionIncluded = message.content.includes('-d');
-        let postTitle;
-        let postDescription = '';
+        console.log("discord_channel_ids", discord_channel_ids);
+        console.log("discord_messages", discord_messages);
+        const postNotion = async (discord_messages: any) => {
+            for (const message of discord_messages) {
+                console.log("message.author", message.author);
+                const userName = message.author.username as USER_TAG_KEY_TYPE;
 
-        if (!isTitleIncluded && !isDescriptionIncluded) {
-            return;
+                const isTitleIncluded = message.content.includes('-t');
+                const isDescriptionIncluded = message.content.includes('-d');
+                let postTitle;
+                let postDescription = '';
+
+                if (!isTitleIncluded && !isDescriptionIncluded) {
+                    return;
+                }
+
+                if (isTitleIncluded && !isDescriptionIncluded) {
+                    postTitle = message.content.split('-t')[1].trim();
+                }
+
+                if (isDescriptionIncluded && !isTitleIncluded) {
+                    postDescription = message.content.split('-d')[1];
+                }
+
+                if (!postTitle) {
+                    postTitle = new Date().toISOString();
+                }
+
+                if (isTitleIncluded && isDescriptionIncluded) {
+                    postTitle = message.content.split('-t')[1].split('-d')[0].trim();
+                    postDescription = message.content.split('-d')[1];
+                }
+
+                const postUserId = USER_TAG[userName];
+
+                // postTitle, postDescriptionが両方ともfalsyの場合はcreateNotionPageを実行せずにreturnする
+                createNotionPage(postTitle, postUserId, postDescription);
+            }
         }
 
-        if (isTitleIncluded && !isDescriptionIncluded) {
-            postTitle = message.content.split('-t')[1].trim();
-        }
-
-        if (isDescriptionIncluded && !isTitleIncluded) {
-            postDescription = message.content.split('-d')[1];
-        }
-
-        if (!postTitle) {
-            postTitle = new Date().toString();
-        }
-
-        if (isTitleIncluded && isDescriptionIncluded) {
-            postTitle = message.content.split('-t')[1].split('-d')[0].trim();
-            postDescription = message.content.split('-d')[1];
-        }
-
-        const postUserId = USER_TAG[userName];
-
-        createNotionPage(postTitle, postUserId, postDescription);
+        await postNotion(discord_messages);
 
         return {
             statusCode: 200,
-            body: JSON.stringify(
-                decycle({
-                    postDescription,
-                    userName,
-                }),
-            ),
+            body: JSON.stringify({ message: "Success" }),
         };
     } catch (err) {
         console.log(err);
