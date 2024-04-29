@@ -1,5 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import axios from 'axios';
+import dayjs from 'dayjs';
 import { decycle } from 'json-cyclic';
 
 /**
@@ -31,6 +32,15 @@ const fetchDiscordMessages = async (channelId: string) => {
         .catch((error) => {
             console.log(error);
         });
+};
+
+const filterMessagesLast24Hours = (messages: any[]) => {
+    const twentyFourHoursAgo = dayjs().subtract(24, 'hour');
+
+    return messages.filter((message) => {
+        const messageTime = dayjs(message.timestamp);
+        return messageTime.isAfter(twentyFourHoursAgo);
+    });
 };
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
@@ -104,10 +114,13 @@ type USER_TAG_KEY_TYPE = keyof typeof USER_TAG;
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult | undefined> => {
     try {
         const discord_channel_ids = Object.values(DISCORD_CHANNEL_ID);
-        const discord_messages = await Promise.all(discord_channel_ids.map(async (channelId) => await fetchDiscordMessages(channelId))).then(results => results.flat());
+        const discord_messages = await Promise.all(
+            discord_channel_ids.map(async (channelId) => await fetchDiscordMessages(channelId)),
+        ).then((results) => results.flat());
 
         const postNotion = async (discord_messages: any) => {
-            for (const message of discord_messages) {
+            const filteredMessages = filterMessagesLast24Hours(discord_messages);
+            for (const message of filteredMessages) {
                 const userName = message.author.username as USER_TAG_KEY_TYPE;
 
                 const isTitleIncluded = message.content.includes('-t');
@@ -116,7 +129,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 let postDescription = '';
 
                 if (!isTitleIncluded && !isDescriptionIncluded) {
-                    continue
+                    continue;
                 }
 
                 if (isTitleIncluded && !isDescriptionIncluded) {
@@ -140,13 +153,13 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
                 await createNotionPage(postTitle, postUserId, postDescription);
             }
-        }
+        };
 
         await postNotion(discord_messages);
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: "Success" }),
+            body: JSON.stringify({ message: 'Success' }),
         };
     } catch (err) {
         console.log(err);
