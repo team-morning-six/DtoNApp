@@ -45,11 +45,16 @@ const filterMessagesLast24Hours = (messages: any[]) => {
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const NOTION_VERSION = '2022-06-28';
-const NOTION_DATABASE_ID = 'c7ad59de-b9a6-41da-8394-95c50c2241cf';
+const USER_DATABASE_MAP: Record<string, string> = {
+    yano_20: '836d7fd6de5a4e289f31b832e73cefb5',
+    ryuji_takagi: '2f9f13c2c3654acca9069513a51848b3',
+    yunosuke924: 'c1b27e29eb6d4206be66c871f656dcdb',
+    hagayuuki: 'adc921d9c5b84b2e918e0ba23a9802e8'
+};
 const NOTION_TITLE_PROPERTY = '投稿タイトル';
 const NOTION_BASE_URL = 'https://api.notion.com/v1';
 
-const createNotionPage = async (postTitle: string, postUserId: string, postDescription: string) => {
+const createNotionPage = async (postTitle: string, postUserId: string, postDescription: string, databaseId: string) => {
     const headers = {
         Authorization: `Bearer ${NOTION_API_KEY}`,
         'Content-Type': 'application/json',
@@ -57,7 +62,7 @@ const createNotionPage = async (postTitle: string, postUserId: string, postDescr
     };
 
     const data = {
-        parent: { type: 'database_id', database_id: NOTION_DATABASE_ID },
+        parent: { type: 'database_id', database_id: databaseId },
         properties: {
             [NOTION_TITLE_PROPERTY]: {
                 title: [
@@ -69,16 +74,16 @@ const createNotionPage = async (postTitle: string, postUserId: string, postDescr
                     },
                 ],
             },
-            タグ: {
-                id: 'jERN',
-                type: 'people',
-                people: [
-                    {
-                        object: 'user',
-                        id: postUserId,
-                    },
-                ],
-            },
+            // タグ: {
+            //     id: 'jERN',
+            //     type: 'people',
+            //     people: [
+            //         {
+            //             object: 'user',
+            //             id: postUserId,
+            //         },
+            //     ],
+            // },
         },
         children: [
             {
@@ -122,6 +127,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             const filteredMessages = filterMessagesLast24Hours(discord_messages);
             for (const message of filteredMessages) {
                 const userName = message.author.username as USER_TAG_KEY_TYPE;
+                const databaseId = USER_DATABASE_MAP[userName];
 
                 const isTitleIncluded = message.content.includes('-t');
                 const isDescriptionIncluded = message.content.includes('-d');
@@ -151,7 +157,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
                 const postUserId = USER_TAG[userName];
 
-                await createNotionPage(postTitle, postUserId, postDescription);
+                await createNotionPage(postTitle, postUserId, postDescription, databaseId);
             }
         };
 
