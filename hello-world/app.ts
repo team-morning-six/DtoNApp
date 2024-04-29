@@ -14,7 +14,7 @@ import { decycle } from 'json-cyclic';
  */
 
 const DISCORD_API_BASEURL = 'https://discordapp.com/api/';
-const DISCORD_API_TOKEN = process.env.DISCORD_API_TOKEN;
+const DISCORD_API_TOKEN = process.env.DiscordApiToken;
 
 const DISCORD_CHANNEL_ID = {
     times_ryuji_takagi: '1140113011386880070',
@@ -43,13 +43,13 @@ const filterMessagesLast24Hours = (messages: any[]) => {
     });
 };
 
-const NOTION_API_KEY = process.env.NOTION_API_KEY;
+const NOTION_API_KEY = process.env.NotionApiKey;
 const NOTION_VERSION = '2022-06-28';
 const USER_DATABASE_MAP: Record<string, string> = {
     yano_20: '836d7fd6de5a4e289f31b832e73cefb5',
     ryuji_takagi: '2f9f13c2c3654acca9069513a51848b3',
     yunosuke924: 'c1b27e29eb6d4206be66c871f656dcdb',
-    hagayuuki: 'adc921d9c5b84b2e918e0ba23a9802e8'
+    hagayuuki: 'adc921d9c5b84b2e918e0ba23a9802e8',
 };
 const NOTION_TITLE_PROPERTY = '投稿タイトル';
 const NOTION_BASE_URL = 'https://api.notion.com/v1';
