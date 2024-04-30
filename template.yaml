@@ -34,11 +34,13 @@ Resources:
       Handler: app.lambdaHandler
       Runtime: nodejs20.x
       Events:
-        ScheduleEvent:
-          Type: Schedule
+        ScheduleV2Event:
+          Type: ScheduleV2
           Properties:
-            # Schedule: rate(3 minutes)
-            Schedule: rate(24 hours)
+            Name: ScheduleV2Every00
+            ScheduleExpression: cron(0 0 * * ? *)
+            Description: lambda schedule2
+            ScheduleExpressionTimezone: "Asia/Tokyo"
       Role: !Ref LamdaRole
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
