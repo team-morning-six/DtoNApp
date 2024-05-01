@@ -45,6 +45,7 @@ const filterMessagesLast24Hours = (messages: any[]) => {
 
 const NOTION_API_KEY = process.env.NotionApiKey;
 const NOTION_VERSION = '2022-06-28';
+const NOTION_DEV_DATABASE_ID = 'c7ad59deb9a641da839495c50c2241cf';
 const USER_DATABASE_MAP: Record<string, string> = {
     yano_20: '836d7fd6de5a4e289f31b832e73cefb5',
     ryuji_takagi: '2f9f13c2c3654acca9069513a51848b3',
@@ -127,7 +128,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             const filteredMessages = filterMessagesLast24Hours(discord_messages);
             for (const message of filteredMessages) {
                 const userName = message.author.username as USER_TAG_KEY_TYPE;
-                const databaseId = USER_DATABASE_MAP[userName];
+                const databaseId = process.env.AWS_SAM_LOCAL ? NOTION_DEV_DATABASE_ID : USER_DATABASE_MAP[userName];
 
                 const isTitleIncluded = message.content.includes('-t');
                 const isDescriptionIncluded = message.content.includes('-d');
