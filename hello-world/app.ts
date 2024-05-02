@@ -117,7 +117,7 @@ const USER_TAG = {
 
 type USER_TAG_KEY_TYPE = keyof typeof USER_TAG;
 
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult | undefined> => {
+export const lambdaHandler = async () => {
     try {
         const discord_channel_ids = Object.values(DISCORD_CHANNEL_ID);
         const discord_messages = await Promise.all(
