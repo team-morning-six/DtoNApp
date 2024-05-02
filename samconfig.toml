@@ -20,8 +20,6 @@ resolve_s3 = true
 s3_prefix = "DtoNApp"
 region = "ap-northeast-1"
 image_repositories = []
-# 本番環境のパラメータ
-parameter_overrides = "hoge"
 disable_rollback = true
 
 [default.package.parameters]

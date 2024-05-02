@@ -24,8 +24,8 @@ Globals:
       LogFormat: JSON
     Environment:
       Variables:
-        DiscordApiToken: hoge
-        NotionApiKey: hoge
+        DiscordApiToken: !Ref DiscordApiToken
+        NotionApiKey: !Ref NotionApiKey
 Resources:
   HelloWorldFunction:
     Type: AWS::Serverless::Function
