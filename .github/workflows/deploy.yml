@@ -6,10 +6,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./hello-world
     steps:
       - uses: actions/checkout@v4
-      - run:
-        working-directory: ./hello-world
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
