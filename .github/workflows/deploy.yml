@@ -24,10 +24,14 @@ jobs:
       - name: Build DtoN App
         run: sam build --use-container
       - name: Deploy DtoN App
+        env:
+          DISCORD_API_TOKEN: ${{ secrets.DISCORD_API_TOKEN }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          LAMDA_ROLE: ${{ secrets.LAMDA_ROLE }}
         run: sam deploy \
           --no-confirm-changeset \
           --no-fail-on-empty-changeset \
           --parameter-overrides \
-          ParameterKey=DiscordApiToken,ParameterValue=${{ secrets.DISCORD_API_TOKEN }} \
-          ParameterKey=NotionApiKey,ParameterValue=${{ secrets.NOTION_API_KEY }} \
-          ParameterKey=LamdaRole,ParameterValue=${{ secrets.LAMDA_ROLE }}
+          ParameterKey=DiscordApiToken,ParameterValue=$DISCORD_API_TOKEN \
+          ParameterKey=NotionApiKey,ParameterValue=$NOTION_API_KEY \
+          ParameterKey=LamdaRole,ParameterValue=$LAMDA_ROLE
