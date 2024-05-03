@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,11 +19,12 @@ jobs:
           cache-dependency-path: ./hello-world
       - run: node --version
       - uses: aws-actions/setup-sam@v2
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
-      - name: build
+      - name: Build sam app
         run: sam build --use-container
       # - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
