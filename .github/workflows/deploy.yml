@@ -17,13 +17,18 @@ jobs:
           cache: npm
           cache-dependency-path: ./hello-world
       - run: node --version
-
-      # - uses: actions/setup-python@v3
-      # - uses: aws-actions/setup-sam@v2
-      # - uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: us-east-2
+      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - uses: actions/github-script@v6
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        with:
+          script: |
+            console.log("awsアクセスキー", process.env.AWS_ACCESS_KEY_ID);
+            console.log("存在しない環境変数", process.env.HOGE);
       # - run: sam build --use-container
       # - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
