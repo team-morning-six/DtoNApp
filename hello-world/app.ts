@@ -11,26 +11,6 @@ const DISCORD_CHANNEL_ID = {
   times_yano: '1149914100084785265',
 };
 
-const fetchDiscordMessages = async (channelId: string) => {
-  return await axios
-    .get(`${DISCORD_API_BASEURL}channels/${channelId}/messages`, {
-      headers: { Authorization: 'Bot ' + DISCORD_API_TOKEN },
-    })
-    .then((response) => response.data)
-    .catch((error) => {
-      console.log(error);
-    });
-};
-
-const filterMessagesLast24Hours = (messages: any[]) => {
-  const twentyFourHoursAgo = dayjs().subtract(24, 'hour');
-
-  return messages.filter((message) => {
-    const messageTime = dayjs(message.timestamp);
-    return messageTime.isAfter(twentyFourHoursAgo);
-  });
-};
-
 const NOTION_API_KEY = process.env.NotionApiKey;
 const NOTION_VERSION = '2022-06-28';
 const NOTION_DEV_DATABASE_ID = 'c7ad59deb9a641da839495c50c2241cf';
@@ -43,7 +23,56 @@ const USER_DATABASE_MAP: Record<string, string> = {
 const NOTION_TITLE_PROPERTY = '投稿タイトル';
 const NOTION_BASE_URL = 'https://api.notion.com/v1';
 
-const createNotionPage = async (postTitle: string, postUserId: string, postDescription: string, databaseId: string) => {
+// todo: あとで直す
+const USER_TAG = {
+  yano_20: '9541fd67-5883-4ac9-9622-3befca571fd3',
+  ryuji_takagi: 'd518a621-96b1-4d50-ae12-56cfa36362b4',
+  yunosuke924: '05c7ac21-5185-4296-8f5e-3e53972b0010',
+  hagayuuki: 'a0b024eb-a321-41b4-b7a7-d1023f8ad052',
+};
+
+type USER_TAG_KEY_TYPE = keyof typeof USER_TAG;
+
+const PREFIX_MAP = {
+  title: ['-t', '.t', '!', '！'],
+  body: ['-d', '-b', '.b', '!', '！！'],
+};
+
+// TODO: PREFIX_MAPを用いていい感じにしたい
+const TITLE_REGEX_PATTERN = /^(-t|!|！|.t)\s(.*?)\n/;
+const BODY_REGEX_PATTERN = /(!!|-d|-b|！！|.b)\s/;
+
+type Message = {
+  id: string;
+  content: string;
+  timestamp: string;
+  author: {
+    id: string;
+    username: string;
+  };
+};
+
+const fetchDiscordMessages = async (channelId: string) => {
+  return await axios
+    .get(`${DISCORD_API_BASEURL}channels/${channelId}/messages`, {
+      headers: { Authorization: 'Bot ' + DISCORD_API_TOKEN },
+    })
+    .then((response) => response.data)
+    .catch((error) => {
+      console.log(error);
+    });
+};
+
+const filterMessagesLast24Hours = (messages: Message[]) => {
+  const twentyFourHoursAgo = dayjs().subtract(24, 'hour');
+
+  return messages.filter((message) => {
+    const messageTime = dayjs(message.timestamp);
+    return messageTime.isAfter(twentyFourHoursAgo);
+  });
+};
+
+const createNotionPage = async (title: string, body: string, postUserId: string, databaseId: string) => {
   const headers = {
     Authorization: `Bearer ${NOTION_API_KEY}`,
     'Content-Type': 'application/json',
@@ -58,21 +87,21 @@ const createNotionPage = async (postTitle: string, postUserId: string, postDescr
           {
             type: 'text',
             text: {
-              content: postTitle,
+              content: title,
             },
           },
         ],
       },
-      // タグ: {
-      //     id: 'jERN',
-      //     type: 'people',
-      //     people: [
-      //         {
-      //             object: 'user',
-      //             id: postUserId,
-      //         },
-      //     ],
-      // },
+      タグ: {
+        id: 'jERN',
+        type: 'people',
+        people: [
+          {
+            object: 'user',
+            id: postUserId,
+          },
+        ],
+      },
     },
     children: [
       {
@@ -83,7 +112,7 @@ const createNotionPage = async (postTitle: string, postUserId: string, postDescr
             {
               type: 'text',
               text: {
-                content: postDescription,
+                content: body,
               },
             },
           ],
@@ -92,65 +121,38 @@ const createNotionPage = async (postTitle: string, postUserId: string, postDescr
     ],
   };
 
-  const response = await axios.post(NOTION_BASE_URL + '/pages', data, { headers });
+  await axios.post(NOTION_BASE_URL + '/pages', data, { headers });
 };
 
-// todo: あとで直す
-const USER_TAG = {
-  yano_20: '9541fd67-5883-4ac9-9622-3befca571fd3',
-  ryuji_takagi: 'd518a621-96b1-4d50-ae12-56cfa36362b4',
-  yunosuke924: '05c7ac21-5185-4296-8f5e-3e53972b0010',
-  hagayuuki: 'a0b024eb-a321-41b4-b7a7-d1023f8ad052',
-};
+const postNotion = async (messages: Message[]) => {
+  const filteredMessages = filterMessagesLast24Hours(messages);
 
-type USER_TAG_KEY_TYPE = keyof typeof USER_TAG;
+  for (const message of filteredMessages) {
+    const userName = message.author.username as USER_TAG_KEY_TYPE;
+    const postUserId = USER_TAG[userName];
+    const databaseId = process.env.AWS_SAM_LOCAL ? NOTION_DEV_DATABASE_ID : USER_DATABASE_MAP[userName];
+
+    const isTitleIncluded = PREFIX_MAP.title.some((prefix) => message.content.startsWith(prefix));
+    const isStartFromBodyPrefix = PREFIX_MAP.body.some((prefix) => message.content.startsWith(prefix));
+
+    if (!isTitleIncluded && !isStartFromBodyPrefix) {
+      continue;
+    }
+
+    const title = TITLE_REGEX_PATTERN.exec(message.content)?.[2] ?? new Date().toISOString();
+    const body = message.content.split(BODY_REGEX_PATTERN).at(-1) ?? '';
+
+    await createNotionPage(title, body, postUserId, databaseId);
+  }
+};
 
 export const lambdaHandler = async () => {
   try {
-    const discord_channel_ids = Object.values(DISCORD_CHANNEL_ID);
-    const discord_messages = await Promise.all(
-      discord_channel_ids.map(async (channelId) => await fetchDiscordMessages(channelId)),
+    const messages = await Promise.all(
+      Object.values(DISCORD_CHANNEL_ID).map(async (channelId) => await fetchDiscordMessages(channelId)),
     ).then((results) => results.flat());
 
-    const postNotion = async (discord_messages: any) => {
-      const filteredMessages = filterMessagesLast24Hours(discord_messages);
-      for (const message of filteredMessages) {
-        const userName = message.author.username as USER_TAG_KEY_TYPE;
-        const databaseId = process.env.AWS_SAM_LOCAL ? NOTION_DEV_DATABASE_ID : USER_DATABASE_MAP[userName];
-
-        const isTitleIncluded = message.content.includes('-t');
-        const isDescriptionIncluded = message.content.includes('-d');
-        let postTitle;
-        let postDescription = '';
-
-        if (!isTitleIncluded && !isDescriptionIncluded) {
-          continue;
-        }
-
-        if (isTitleIncluded && !isDescriptionIncluded) {
-          postTitle = message.content.split('-t')[1].trim();
-        }
-
-        if (isDescriptionIncluded && !isTitleIncluded) {
-          postDescription = message.content.split('-d')[1];
-        }
-
-        if (!postTitle) {
-          postTitle = new Date().toISOString();
-        }
-
-        if (isTitleIncluded && isDescriptionIncluded) {
-          postTitle = message.content.split('-t')[1].split('-d')[0].trim();
-          postDescription = message.content.split('-d')[1];
-        }
-
-        const postUserId = USER_TAG[userName];
-
-        await createNotionPage(postTitle, postUserId, postDescription, databaseId);
-      }
-    };
-
-    await postNotion(discord_messages);
+    await postNotion(messages);
 
     return {
       statusCode: 200,
