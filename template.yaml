@@ -38,8 +38,7 @@ Resources:
           Type: ScheduleV2
           Properties:
             Name: ScheduleV2Every00
-            # ScheduleExpression: cron(0 0 * * ? *)
-            ScheduleExpression: cron(55 16 * * ? *)
+            ScheduleExpression: cron(0 0 * * ? *)
             Description: lambda schedule2
             ScheduleExpressionTimezone: "Asia/Tokyo"
       Role: !Ref LamdaRole
