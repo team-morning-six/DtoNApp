@@ -7,9 +7,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # defaults:
-    #   run:
-    #     working-directory: ./hello-world
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,7 +14,6 @@ jobs:
           node-version: "20"
           cache: npm
           cache-dependency-path: ./hello-world
-      - run: node --version
       - uses: aws-actions/setup-sam@v2
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -25,6 +21,13 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
-      - name: Build sam app
+      - name: Build DtoN App
         run: sam build --use-container
-      # - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+      - name: Deploy DtoN App
+        run: sam deploy \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --parameter-overrides \
+          ParameterKey=DiscordApiToken,ParameterValue=${{ secrets.DISCORD_API_TOKEN }} \
+          ParameterKey=NotionApiKey,ParameterValue=${{ secrets.NOTION_API_KEY }} \
+          ParameterKey=LamdaRole,ParameterValue=${{ secrets.LAMDA_ROLE }}
