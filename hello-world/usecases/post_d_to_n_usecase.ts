@@ -40,7 +40,7 @@ export class PostDtoNUseCase {
     ).then((results) => results.flat());
 
     const postableMessages = this.filterMessagesLast24Hours(messages).filter((message) =>
-      this.canPostMessageToNotion(message),
+      this.isPostableMessageToNotion(message),
     );
 
     for (const message of postableMessages) {
@@ -58,7 +58,7 @@ export class PostDtoNUseCase {
     });
   }
 
-  private static canPostMessageToNotion(message: DiscordMessage) {
+  private static isPostableMessageToNotion(message: DiscordMessage) {
     const isStartFromTitlePrefix = this.PREFIX_MAP.title.some((prefix) => message.content.startsWith(prefix));
     const isStartFromBodyPrefix = this.PREFIX_MAP.body.some((prefix) => message.content.startsWith(prefix));
 
